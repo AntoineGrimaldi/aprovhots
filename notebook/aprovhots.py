@@ -3,14 +3,22 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 
+index = 'xytp'
+x_index, y_index, t_index, p_index = 0, 1, 2, 3
+labelz = ['sea', 'ground', 'mixed']
+
+#    #get label name -> for later
+#for i, lab in enumerate(labelz):
+#    if name.find(lab) != -1: break
+#label = i
+#print(name, labelz[i])
+
 
 def csv2npy(path):
     os.chdir(path)
     list_csv = glob.glob('*.csv')
     list_npy = glob.glob('*.npy')
     print(f'list of all .csv files : \n {list_csv} \n')
-
-    index = 'xytp'
 
     for number, name in enumerate(list_csv):
         if name[:-4]+'.npy' not in list_npy:
@@ -32,14 +40,50 @@ def csv2npy(path):
                     events = np.array([x,y,t,p]).T
             np.save(path+name[:-4], events)
         else: print(f'{name} was already loaded saved as .npy file')
-        
 
+def split2patches(path, patch_size, min_events=100):
+    os.chdir(path)
+    list_npy = glob.glob('*.npy')
+    print(f'list of all files : \n {list_npy} \n')
+    for name in list_npy:
+        if name.find('patches') == -1 and name[:-4]+f'_patches_{patch_size}.npy' not in list_npy:
+            events = np.load(path+name)
+            events_stacked = np.array([])
+            width, height = int(max(events[:,x_index])), int(max(events[:,y_index]))
+            pbar = tqdm(total=width//patch_size*height//patch_size)
+            # divide the pixel grid into patches
+            for x in range(width//patch_size):
+                for y in range(height//patch_size):
+                    events_patch = events[
+                                   (events[:,x_index]>=x*patch_size)&(events[:,x_index]<(x+1)*patch_size)&
+                                   (events[:,y_index]>=y*patch_size)&(events[:,y_index]<(y+1)*patch_size)]
+                    events_patch[:,x_index] -= x*patch_size
+                    events_patch[:,y_index] -= y*patch_size
+                    if len(events_patch)<min_events:
+                        pass
+                    else:
+                        events_patch[:,t_index] -= np.min(events_patch[:,t_index]) #makes time alignment
+                        events_stacked = np.vstack([events_stacked, events_patch]) if events_stacked.size else events_patch
+                    pbar.update(1)
+            pbar.close()
+            np.save(path+name[:-4]+f'_patches_{patch_size}', events_stacked)
+        else: print(f'{name} was already divided into patches')
         
-        
-        
-        
-        
-        
+def get_labels_indices(path, labelz, patch_size):
+    os.chdir(path)
+    events_stacked = np.array([])
+    indices_stacked = np.array([])
+    label_stacked = np.array([])
+    for i, lab in enumerate(labelz):
+        list_npy = glob.glob(f'*{lab}*patches_{patch_size}.npy')
+        for name in list_npy:
+            events = np.load(path+name)
+            indices = np.argwhere(events[:,t_index]==0)
+            label = np.ones([indices.shape[0],1])*i
+            events_stacked = np.vstack([events_stacked, events]) if events_stacked.size else events
+            indices_stacked = np.vstack([indices_stacked, indices]) if indices_stacked.size else indices
+            label_stacked = np.vstack([label_stacked, label]) if label_stacked.size else label
+    return events_stacked, indices_stacked, label_stacked
         
         
         
