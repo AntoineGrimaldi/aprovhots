@@ -1,11 +1,12 @@
-import glob, ast, os
+import glob, ast, os, tonic, torch
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
 
 index = 'xytp'
 x_index, y_index, t_index, p_index = 0, 1, 2, 3
-labelz = ['sea', 'ground', 'mixed']
+label_list = ['sea', 'ground', 'mixed']
 
 #    #get label name -> for later
 #for i, lab in enumerate(labelz):
@@ -13,14 +14,16 @@ labelz = ['sea', 'ground', 'mixed']
 #label = i
 #print(name, labelz[i])
 
-
 def csv2npy(path):
     os.chdir(path)
     list_csv = glob.glob('*.csv')
     list_npy = glob.glob('*.npy')
+    list_npy_nopatches = []
     print(f'list of all .csv files : \n {list_csv} \n')
 
     for number, name in enumerate(list_csv):
+        if name.find('patches') == -1:
+            list_npy_nopatches.append(name[:-4]+'.npy')
         if name[:-4]+'.npy' not in list_npy:
             print(f'loading: {name}')
             df = pd.read_csv(path+name)
@@ -40,6 +43,7 @@ def csv2npy(path):
                     events = np.array([x,y,t,p]).T
             np.save(path+name[:-4], events)
         else: print(f'{name} was already loaded saved as .npy file')
+    return list_npy_nopatches
 
 def split2patches(path, patch_size, min_events=100):
     os.chdir(path)
@@ -76,104 +80,47 @@ def get_labels_indices(path, labelz, patch_size):
     label_stacked = np.array([])
     for i, lab in enumerate(labelz):
         list_npy = glob.glob(f'*{lab}*patches_{patch_size}.npy')
+        print(f'using these files: \n {list_npy}')
         for name in list_npy:
             events = np.load(path+name)
-            indices = np.argwhere(events[:,t_index]==0)
-            label = np.ones([indices.shape[0],1])*i
+            indices = np.argwhere((events[:-1,t_index]==0) & (np.diff(events[:,t_index])!=0))
+            label = np.ones([indices.shape[0],1])*label_list.index(lab)
             events_stacked = np.vstack([events_stacked, events]) if events_stacked.size else events
             indices_stacked = np.vstack([indices_stacked, indices]) if indices_stacked.size else indices
             label_stacked = np.vstack([label_stacked, label]) if label_stacked.size else label
-    return events_stacked, indices_stacked, label_stacked
+    return events_stacked, indices_stacked.astype(int), label_stacked.astype(int)
         
+def get_info(path, list_files):
+    D = []
+    for name in list_files:
+        events = np.load(path+name)
+        duration = (events[-1,2]-events[0,2])*1e-6
+        nb_events = events.shape[0]
+        nb_OFF = (events[:,3]==0).sum()
+        nb_ON = (events[:,3]==1).sum()
+        density = nb_events/duration
+        D.append(density*1e-3)
+        print(f'file name: {name}')
+        print(f'recording duration: {np.round(duration)} s \n events density: {np.round(density,3)} ev/sec \n number of ON/OFF events: {np.round(nb_ON/nb_OFF,3)}\n')
+    return D
         
-        
-        
-        
-        
-        
-        
-        
-import os
-import torch
-import tonic
-import pickle
-import numpy as np
-import pandas as pd
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-from HOTS.Tools import LRtorch, classification_numbevents
-
-def load_synthetic_data_patches(path, rec_number, patch_size, time_limit, min_events):
-    # this function loads .csv files from the 'path' that is defined. A patch_size can be 
-    # given to divide the pixel grid into patches of 'patch_size'*'patch_size'. 'time_limit' 
-    # sets a maximum recording time (not ready) and if a sample has less that 'min-events'
-    # events it is not kept
-    f_name = f'../Data/aprovisynt_{patch_size}_{rec_number}_{time_limit}_{min_events}.pkl'
-    list = os.listdir(path)
-    
-    x_index, y_index, t_index, p_index = 0, 1, 2, 3
-    labelz = [0,0,1,2,2,2,1] # 0 for 'sea' and 1 for 'ground' (labels for synthetic data)
-    label_name = ['sea', 'ground', 'mixed']
-    
-    if os.path.isfile(f_name):
-        with open(f_name, 'rb') as file:
-            events_stacked, label_stacked, indices = pickle.load(file)
-            label = np.unique(label_stacked)
-            num_label = len(label)
-            FR = np.zeros(num_label)
-            for i, ind in enumerate(indices[:-1]):
-                nbev = len(events_stacked[ind:indices[i+1]])
-                duration = (events_stacked[indices[i+1]-1,t_index]-events_stacked[ind,t_index])*1e-6
-                fr = nbev/duration
-                FR[label_stacked[i]] += fr
-                #print(f'label: {label_stacked[i]} \n total number of events: {nbev} \n recording time: {duration} sec \n firing rate: {nbev/duration} Hz \n')
-            for l in label:
-                FR[l] /= np.sum(label_stacked==l)
-                print(f'Mean firing rate for label {label_name[l]}: {FR[l]} Hz')
-    else:
-        events_stacked = np.array([])
-        label_stacked = []
-        indices = [0]
-        for num in rec_number:
-            fname_csv = f'{path}/{list[num]}'
-            df = pd.read_csv(fname_csv)
-            events = np.zeros([df.shape[0],4]).astype(int)
-            events[:,[x_index, y_index, p_index]] = df.values[:,[x_index,y_index,4]]
-            t_sec = df.values[:,2]
-            t_nsec = df.values[:,3]
-            initial_time = t_sec[0]*1e6+t_nsec[0]*1e-3
-            events[:,t_index] = t_sec[:]*1e6+t_nsec[:]*1e-3-initial_time
-            # converts time into microsecs
-            label = labelz[num]
-            print(f'file name: {list[num]} \n total number of events: {len(events)} \n recording time: {events[-1,t_index]*1e-6} sec \n firing rate: {len(events)/(events[-1,t_index]*1e-6)} Hz \n')
-            width, height = max(events[:,x_index]), max(events[:,y_index])
-            pbar = tqdm(total=width//patch_size*height//patch_size)
-            # divide the pixel grid into patches
-            for x in range(width//patch_size):
-                for y in range(height//patch_size):
-                    events_patch = events[
-                                   (events[:,x_index]>=x*patch_size)&(events[:,x_index]<(x+1)*patch_size)&
-                                   (events[:,y_index]>=y*patch_size)&(events[:,y_index]<(y+1)*patch_size)]
-                    events_patch[:,x_index] -= x*patch_size
-                    events_patch[:,y_index] -= y*patch_size
-    #                if time_limit:
-    #                    time = 0
-    #                    events_patch[:,t_index] = events_patch[(events_patch[:,t_index]<time)]
-                    if len(events_patch)<min_events:
-                        pass
-                    else:
-                        events_patch[:,t_index] -= np.min(events_patch[:,t_index])
-                        indices.append(indices[-1]+events_patch.shape[0])
-                        label_stacked.append(label)
-                        events_stacked = np.vstack([events_stacked, events_patch]) if events_stacked.size else events_patch
-                    pbar.update(1)
-            # print(np.max(events_patch[:,x_index]), np.max(events_patch[:,y_index]), np.max(events_patch[:,t_index]))
-            pbar.close()
-        with open(f_name, 'wb') as file:
-            pickle.dump([events_stacked, label_stacked, indices], file, pickle.HIGHEST_PROTOCOL)
-    return events_stacked, label_stacked, indices, 
-
-
+def get_isi(path, list_files):
+    mean_isi = None
+    isipol = np.zeros([2])
+    t_index = 2
+    for name in list_files:
+        events = np.load(path+name)
+        for polarity in [0,1]:
+            events_pol = events[(events[:, p_index]==polarity)]
+            N_events = events_pol.shape[0]-1
+            for i in range(events_pol.shape[0]-1):
+                isi = events_pol[i+1,t_index]-events_pol[i,t_index]
+                if isi>0:
+                    mean_isi = (N_events-1)/N_events*mean_isi+1/N_events*isi if mean_isi else isi
+            isipol[polarity]=mean_isi
+    print(f'Mean ISI for ON events: {isipol[1].mean()*1e-3} in ms \n')
+    print(f'Mean ISI for OFF events: {isipol[0].mean()*1e-3} in ms \n')
+    return isipol
 
 def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
     num_workers = 0 # ajouter num_workers si besoin!
@@ -188,11 +135,12 @@ def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
     dataset = 'aprovisynt'
     nb_pola = 2
     N = patch_R*patch_R*nb_pola
+    sensor_size = (patch_R, patch_R,nb_pola)
     
     nb_digit = len(indices_train)
 
-    transform = tonic.transforms.Compose([tonic.transforms.ToTimesurface(surface_dimensions=False, tau=tau_cla, decay="exp", merge_polarities=False)])
-    train_dataset = AERDataset(tensors=(events_train, label_train), indices=indices_train, name = 'aprovisynt', transform=transform)
+    transform = tonic.transforms.Compose([tonic.transforms.ToTimesurface(sensor_size=sensor_size, tau=tau_cla, decay="exp")])
+    train_dataset = APROVIS_Dataset(tensors=(events_train, label_train), indices=indices_train, name = 'aprovisynt', transform=transform)
     loader = DataLoader(train_dataset, shuffle=True)
 
     torch.set_default_tensor_type("torch.DoubleTensor")
@@ -210,6 +158,7 @@ def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
         logistic_model.parameters(), lr=learning_rate, betas=betas, amsgrad=amsgrad
     )
     pbar = tqdm(total=int(num_epochs))
+    print('something')
     for epoch in range(int(num_epochs)):
         losses = []
         for X, label in loader:
@@ -233,3 +182,51 @@ def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
     with open(f'../Records/model/torch_model_{tau_cla}_{patch_R}.pkl', 'wb') as file:
         pickle.dump([logistic_model, losses], file, pickle.HIGHEST_PROTOCOL)
     return logistic_model, losses
+
+class APROVIS_Dataset(Dataset):
+    """makes a dataset allowing aer_to_vect() transform from tonic
+    """
+    #sensor_size = (128, 128,2)
+    dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
+    ordering = dtype.names
+    classes = ["sea", "ground"]
+    
+    def __init__(self, tensors, indices, name, transform=None, nb_pola=2):
+        self.X_train, self.y_train = tensors
+        self.transform = transform
+        self.digind = indices[:,0]
+        assert len(self.digind) == len(self.y_train)
+
+    def __getitem__(self, index):
+        events = make_structured_array(self.X_train[self.digind[index]:self.digind[index+1], x_index], self.X_train[self.digind[index]:self.digind[index+1], y_index], self.X_train[self.digind[index]:self.digind[index+1], t_index], self.X_train[self.digind[index]:self.digind[index+1], p_index], dtype=self.dtype)
+        if self.transform:
+            events = self.transform(events)
+        target = self.y_train[index]
+        return events.astype(float), target
+
+    def __len__(self):
+        return len(self.digind)-1
+    
+def make_structured_array(x, y, t, p, dtype):
+    """
+    Make a structured array given lists of x, y, t, p
+    Args:
+        x: List of x values
+        y: List of y values
+        t: List of times
+        p: List of polarities boolean
+    Returns:
+        xytp: numpy structured array
+    """
+    return np.fromiter(zip(x, y, t, p), dtype=dtype)
+
+    
+class LRtorch(torch.nn.Module):
+    #torch.nn.Module -> Base class for all neural network modules
+    def __init__(self, N, n_classes, bias=True):
+        super(LRtorch, self).__init__()
+        self.linear = torch.nn.Linear(N, n_classes, bias=bias)
+        self.nl = torch.nn.Softmax(dim=1)
+
+    def forward(self, factors):
+        return self.nl(self.linear(factors))
