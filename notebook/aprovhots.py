@@ -83,7 +83,7 @@ def get_labels_indices(path, labelz, patch_size):
         print(f'using these files: \n {list_npy}')
         for name in list_npy:
             events = np.load(path+name)
-            indices = np.argwhere((events[:-1,t_index]==0) & (np.diff(events[:,t_index])!=0))
+            indices = np.vstack((np.array([events_stacked.shape[0]]),np.argwhere((events[1:,t_index]==0)&(np.diff(events[:,t_index])<0))+events_stacked.shape[0]+1))
             label = np.ones([indices.shape[0],1])*label_list.index(lab)
             events_stacked = np.vstack([events_stacked, events]) if events_stacked.size else events
             indices_stacked = np.vstack([indices_stacked, indices]) if indices_stacked.size else indices
@@ -118,8 +118,8 @@ def get_isi(path, list_files):
                 if isi>0:
                     mean_isi = (N_events-1)/N_events*mean_isi+1/N_events*isi if mean_isi else isi
             isipol[polarity]=mean_isi
-    print(f'Mean ISI for ON events: {isipol[1].mean()*1e-3} in ms \n')
-    print(f'Mean ISI for OFF events: {isipol[0].mean()*1e-3} in ms \n')
+    print(f'Mean ISI for ON events: {np.round(isipol[1].mean()*1e-3,1)} in ms \n')
+    print(f'Mean ISI for OFF events: {np.round(isipol[0].mean()*1e-3,1)} in ms \n')
     return isipol
 
 def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
@@ -158,18 +158,15 @@ def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
         logistic_model.parameters(), lr=learning_rate, betas=betas, amsgrad=amsgrad
     )
     pbar = tqdm(total=int(num_epochs))
-    print('something')
     for epoch in range(int(num_epochs)):
         losses = []
         for X, label in loader:
             X, label = X[0].to(device) ,label[0].to(device)
             X = X.reshape(X.shape[0], N)
             outputs = logistic_model(X)
-
             n_events = X.shape[0]
             labels = label*torch.ones(n_events).type(torch.LongTensor).to(device)
             labels = torch.nn.functional.one_hot(labels, num_classes=n_classes).type(torch.DoubleTensor).to(device)
-
             loss = criterion(outputs, labels)
             optimizer.zero_grad()
             loss.backward()
