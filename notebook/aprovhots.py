@@ -123,12 +123,12 @@ def get_isi(events):
     print(f'Mean ISI for OFF events: {np.round(isipol[0].mean()*1e-3,1)} in ms \n')
     return isipol
 
-def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
+def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R, date):
     num_workers = 0 # ajouter num_workers si besoin!
     learning_rate = 0.005
     beta1, beta2 = 0.9, 0.999
     betas = (beta1, beta2)
-    num_epochs = 2 ** 5 + 1
+    num_epochs = 1#2 ** 5 + 1
     sample_space = 1
     jitonic = [None, None]
     subset_size = None
@@ -177,7 +177,7 @@ def fit_MLR(events_train, label_train, indices_train, tau_cla, patch_R):
         pbar.update(1)
 
     pbar.close()
-    with open(f'../Records/model/torch_model_{tau_cla}_{patch_R}.pkl', 'wb') as file:
+    with open(f'../Records/model/{date}_torch_model_{tau_cla}_{patch_R}.pkl', 'wb') as file:
         pickle.dump([logistic_model, losses], file, pickle.HIGHEST_PROTOCOL)
     return logistic_model, losses
 
