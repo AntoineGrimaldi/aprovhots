@@ -79,7 +79,10 @@ def get_labels_indices(path, labelz, patch_size):
     indices_stacked = np.array([])
     label_stacked = np.array([])
     for i, lab in enumerate(labelz):
-        list_npy = glob.glob(f'*{lab}*patches_{patch_size}.npy')
+        if patch_size:
+            list_npy = glob.glob(f'*{lab}*patches_{patch_size}.npy')
+        else:
+            list_npy = glob.glob(f'*{lab}*.npy')
         print(f'using these files: \n {list_npy}')
         for name in list_npy:
             events = np.load(path+name)
@@ -104,20 +107,18 @@ def get_info(path, list_files):
         print(f'recording duration: {np.round(duration)} s \n events density: {np.round(density,3)} ev/sec \n number of ON/OFF events: {np.round(nb_ON/nb_OFF,3)}\n')
     return D
         
-def get_isi(path, list_files):
+def get_isi(events):
     mean_isi = None
     isipol = np.zeros([2])
     t_index = 2
-    for name in list_files:
-        events = np.load(path+name)
-        for polarity in [0,1]:
-            events_pol = events[(events[:, p_index]==polarity)]
-            N_events = events_pol.shape[0]-1
-            for i in range(events_pol.shape[0]-1):
-                isi = events_pol[i+1,t_index]-events_pol[i,t_index]
-                if isi>0:
-                    mean_isi = (N_events-1)/N_events*mean_isi+1/N_events*isi if mean_isi else isi
-            isipol[polarity]=mean_isi
+    for polarity in [0,1]:
+        events_pol = events[(events[:, p_index]==polarity)]
+        N_events = events_pol.shape[0]-1
+        for i in range(events_pol.shape[0]-1):
+            isi = events_pol[i+1,t_index]-events_pol[i,t_index]
+            if isi>0:
+                mean_isi = (N_events-1)/N_events*mean_isi+1/N_events*isi if mean_isi else isi
+        isipol[polarity]=mean_isi
     print(f'Mean ISI for ON events: {np.round(isipol[1].mean()*1e-3,1)} in ms \n')
     print(f'Mean ISI for OFF events: {np.round(isipol[0].mean()*1e-3,1)} in ms \n')
     return isipol
