@@ -27,7 +27,7 @@ def csv_load(path, name):
     return events
 
 
-def save_as_patches(events, path, label, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
+def save_as_patches(events, path, label, name_num, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
     print('splitting ...')
     if not os.path.exists(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}'):
         os.makedirs(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}')
@@ -44,7 +44,7 @@ def save_as_patches(events, path, label, patch_size = None, sensor_size=None, ma
     else:
         patch_width, patch_height = sensor_size
     if max_duration:
-        time_limit = max_duration*1e3 #to enter max_duration in ms 
+        time_limit = max_duration*1e3 #to enter max_duration in ms
     else:
         time_limit = events[-1,t_index]
     num_patches = int(width//patch_width*height//patch_height*events[-1, t_index]//time_limit)
@@ -65,25 +65,26 @@ def save_as_patches(events, path, label, patch_size = None, sensor_size=None, ma
                 indice+=1
                 if indice>indice_test:
                     set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
-                print(events_patch_timesplit.shape[0])
                 if events_patch_timesplit.shape[0]>min_num_events:
-                    np.save(path+set_name+f'{patch_size}_{max_duration}_{indice}', events_patch_timesplit)
+                    np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
                 pbar.update(1)
     pbar.close()
                     
 def build_aprovis_dataset(path, labelz, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
-    os.chdir(path)
-    for lab_num, label in enumerate(labelz):
-        list_csv = glob.glob(f'*{label}*.csv')
-        for name in list_csv:
-            events = csv_load(path, name)
-            save_as_patches(events, path, label, patch_size = patch_size, sensor_size=sensor_size, max_duration=max_duration, min_num_events=min_num_events, train_test_ratio=train_test_ratio, ordering = ordering)
+    if not os.path.exists(path+f'patch_{patch_size}_duration_{max_duration}'):
+        os.chdir(path)
+        for lab_num, label in enumerate(labelz):
+            list_csv = glob.glob(f'*{label}*.csv')
+            for name_num, name in enumerate(list_csv):
+                events = csv_load(path, name)
+                save_as_patches(events, path, label, name_num, patch_size = patch_size, sensor_size=sensor_size, max_duration=max_duration, min_num_events=min_num_events, train_test_ratio=train_test_ratio, ordering = ordering)
+    else: print(f'this dataset was already created, check at : \n {path}')
                   
             
 class Synthetic_Dataset(Dataset):
     """synthetic dataset from Sotiris
     """
-    classes = ["sea", "ground"]
+    classes = ["sea", "gro"]
     int_classes = dict(zip(classes, range(2)))
     sensor_size = (128, 128, 2)
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
@@ -91,7 +92,7 @@ class Synthetic_Dataset(Dataset):
     #absolute path of the .csv files 
     path = '/home/INT/grimaldi.a/Documents/projets/WP3/2021-12-06_simulator_data/'
 
-    def __init__(self, save_to, train=True, transform=None, target_transform=None, patch_size=None, max_duration=None):
+    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, transform=None, target_transform=None):
         super(Synthetic_Dataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
@@ -99,21 +100,24 @@ class Synthetic_Dataset(Dataset):
         self.train = train
 
         if train:
-            self.folder_name = f'/patch_{patch_size}_duration_{max_duration}/train'
+            self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'
         else:
-            self.folder_name = f'/patch_{patch_size}_duration_{max_duration}/test'
+            self.folder_name = f'patch_{patch_size}_duration_{max_duration}/test/'
+            
+        self.location_on_system = save_to
 
         file_path = os.path.join(self.location_on_system, self.folder_name)
         
         if not os.path.exists(file_path):
-            build_aprovis_dataset(self.location_on_system, classes, patch_size=patch_size, sensor_size=sensor_size, max_duration=max_duration)
+            build_aprovis_dataset(self.location_on_system, self.classes, patch_size=patch_size, sensor_size=self.sensor_size, max_duration=max_duration)
         
         for path, dirs, files in os.walk(file_path):
             files.sort()
             for file in files:
                 if file.endswith("npy"):
                     self.data.append(np.load(os.path.join(path, file)))
-                    self.targets.append(self.int_classes[path[-2:]])
+                    self.targets.append(self.int_classes[path[-3:]])
+                    print(self.int_classes[path[-3:]], path[-3:])
 
     def __getitem__(self, index):
         """
@@ -135,15 +139,3 @@ class Synthetic_Dataset(Dataset):
         return self._is_file_present() and self._folder_contains_at_least_n_files_of_type(
             20, ".npy"
         )
-    
-    
-    
-path = '/home/INT/grimaldi.a/Documents/projets/WP3/2021-12-06_simulator_data/'
-patch_size = (16,16)
-max_duration=None # 5e3 -> 5 s
-labelz = ['sea','ground']
-sensor_size = (128, 128, 2)
-min_num_events=1000
-train_test_ratio=.75
-ordering = 'xytp'
-build_aprovis_dataset(path, labelz, patch_size = patch_size, sensor_size = sensor_size, max_duration=max_duration, min_num_events=min_num_events, train_test_ratio=train_test_ratio, ordering = ordering)
