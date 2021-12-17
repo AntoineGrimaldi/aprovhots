@@ -97,8 +97,6 @@ class Synthetic_Dataset(Dataset):
             save_to, transform=transform, target_transform=target_transform
         )
 
-        self.train = train
-
         if train:
             self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'
         else:
@@ -117,7 +115,6 @@ class Synthetic_Dataset(Dataset):
                 if file.endswith("npy"):
                     self.data.append(np.load(os.path.join(path, file)))
                     self.targets.append(self.int_classes[path[-3:]])
-                    print(self.int_classes[path[-3:]], path[-3:])
 
     def __getitem__(self, index):
         """
