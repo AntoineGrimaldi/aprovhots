@@ -17,7 +17,7 @@ notebook/__pycache__/
 *.ipa
 *.apk
 
-#Cache
+# Cache
 *.pyc
 
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
