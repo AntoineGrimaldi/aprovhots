@@ -9,6 +9,7 @@ bin-release/
 Data/
 Records/
 notebook/.ipynb_checkpoints/
+notebook/__pycache__/
 
 # Executables
 *.swf
