@@ -57,7 +57,7 @@ def fit_MLR(path,
         N = sensor_size[0]*sensor_size[1]*nb_pola
 
         transform = tonic.transforms.Compose([tonic.transforms.ToTimesurface(sensor_size=sensor_size, tau=tau_cla, decay="exp")])
-        dataset = Synthetic_Dataset(save_to=path, train=True, patch_size=patch_size, transform=transform)
+        dataset = Synthetic_Dataset(save_to=path, train=True, patch_size=sensor_size, transform=transform)
         loader = get_loader(dataset, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, seed=seed)
         if verbose: print(f'Number of training samples: {len(loader)}')
 
@@ -90,7 +90,8 @@ def fit_MLR(path,
                 loss.backward()
                 optimizer.step()
                 losses.append(loss.item())
-            print(f'loss for epoch number {epoch}: {loss}')
+            if verbose:
+                print(f'loss for epoch number {epoch}: {loss}')
             pbar.update(1)
 
         pbar.close()
@@ -132,7 +133,7 @@ def predict_data(path,
         logistic_model = model.to(device)
 
         pbar = tqdm(total=len(loader))
-        likelihood, true_target, timing = [], [], []
+        likelihood, true_target = [], []
 
         for X, label in loader:
             X, label = X[0].to(device) ,label[0].to(device)
@@ -141,7 +142,6 @@ def predict_data(path,
             outputs = logistic_model(X)
             likelihood.append(outputs.cpu().numpy())
             true_target.append(label.cpu().numpy())
-            timing.append(label.cpu().numpy())
             pbar.update(1)
         pbar.close()
 

@@ -128,6 +128,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
         events, target = self.data[index], self.targets[index]
         #this line is used in tonic package, keep and see if needed:
         events = np.lib.recfunctions.unstructured_to_structured(events, self.dtype)
+
         if self.transform is not None:
             events = self.transform(events)
         if self.target_transform is not None:
