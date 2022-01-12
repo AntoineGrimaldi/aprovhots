@@ -18,7 +18,7 @@ def csv_load(path, name):
             x = pd.DataFrame.from_dict(mydict)['x'].values
             y = pd.DataFrame.from_dict(mydict)['y'].values
             # timestamps are converted in microseconds
-            t = pd.DataFrame.from_dict(mydict)['secs'].values*1e6+pd.DataFrame.from_dict(mydict)['nsecs'].values*1e-3 
+            t = pd.DataFrame.from_dict(mydict)['secs'].values*1e6+pd.DataFrame.from_dict(mydict)['nsecs'].values*1e-3
             p = pd.DataFrame.from_dict(mydict)['polarity'].values
             if events is not None:
                 events = np.vstack((events, np.array([x,y,t,p]).T))
@@ -96,7 +96,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, transform=None, target_transform=None):
+    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, transform=tonic.transforms.NumpyAsType(int), target_transform=None):
         super(Synthetic_Dataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
