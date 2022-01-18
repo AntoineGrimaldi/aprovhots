@@ -64,8 +64,9 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                            (events[:,y_index]>=y*patch_height)&(events[:,y_index]<(y+1)*patch_height)]
             events_patch[:,x_index] -= x*patch_width
             events_patch[:,y_index] -= y*patch_height
-            for t in range(int(events[-1, t_index]//time_limit)):
+            for t in range(int(events[-1, t_index]//time_limit-1)):
                 events_patch_timesplit = events_patch[(events_patch[:,t_index]>=t*time_limit)&(events_patch[:,t_index]<(t+1)*time_limit)]
+                events_patch_timesplit -= events_patch_timesplit[-1,t_index]
                 indice+=1
                 if indice>indice_test:
                     set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
@@ -92,7 +93,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
     '''
     classes = ["sea", "gro"]
     int_classes = dict(zip(classes, range(2)))
-    sensor_size = (128, 128, 2)
+    sensor_size = [128, 128, 2]
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
@@ -112,6 +113,8 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
         
         if not os.path.exists(file_path):
             build_aprovis_dataset(self.location_on_system, self.classes, patch_size=patch_size, sensor_size=self.sensor_size, max_duration=max_duration)
+            
+        self.sensor_size[0], self.sensor_size[1] = patch_size[0], patch_size[1]
         
         for path, dirs, files in os.walk(file_path):
             files.sort()
