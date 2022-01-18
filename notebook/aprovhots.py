@@ -32,7 +32,7 @@ def fit_MLR(path,
     if network:
         model_name = f'../Records/models/{network.get_fname()}_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
     else:
-        model_name = f'../Records/model/{date}_RAW_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
+        model_name = f'../Records/models/{date}_RAW_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
     
     if os.path.isfile(model_name):
         print('load existing model')
@@ -96,7 +96,9 @@ def fit_MLR(path,
 def predict_data(path,
                  date, 
                  tau_cla, #enter tau_cla in ms
+                 network = None,
                  patch_size = None,
+                 max_duration = None,
                  kfold = None,
                  kfold_ind = 0,
                  num_workers = 0,
@@ -104,18 +106,27 @@ def predict_data(path,
                  verbose=False,
         ):
     
-    with open(f'../Records/model/{date}_torch_model_{tau_cla}_{patch_size}.pkl', 'rb') as file:
+    if network:
+        model_name = f'../Records/models/{network.get_fname()}_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
+    else:
+        model_name = f'../Records/models/{date}_RAW_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
+    
+    with open(model_name, 'rb') as file:
         model, loss = pickle.load(file)
     
-    nb_pola = 2
     tau_cla *= 1e3
-    sensor_size = (128,128,nb_pola)
-    if patch_size: sensor_size = (patch_size[0], patch_size[1], nb_pola)
-    N = sensor_size[0]*sensor_size[1]*nb_pola
-    
+    sensor_size = (128,128,2)
+    if patch_size: sensor_size = (patch_size[0], patch_size[1], 2)
+    if network: sensor_size = (network.TS[0].camsize[0], network.TS[0].camsize[1], network.L[-1].kernel.shape[1])
+    N = sensor_size[0]*sensor_size[1]*sensor_size[2]
+
     transform = tonic.transforms.Compose([tonic.transforms.ToTimesurface(sensor_size=sensor_size, tau=tau_cla, decay="exp")])
-    dataset = Synthetic_Dataset(save_to=path, train=False, patch_size=patch_size, transform=transform)
-    loader = get_loader(dataset, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, seed=seed)
+    if network:
+        path_to_dataset = f'../Records/output/train/{network.get_fname()}_None/';
+        dataset = HOTS_Dataset(path_to_dataset, timesurface_size, transform = transform)
+    else:
+        dataset = Synthetic_Dataset(save_to = path, train = True, patch_size = patch_size, max_duration = max_duration, transform = transform)
+    loader = get_loader(dataset, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, seed = seed)
     if verbose: print(f'Number of training samples: {len(loader)}')
     
     with torch.no_grad():
