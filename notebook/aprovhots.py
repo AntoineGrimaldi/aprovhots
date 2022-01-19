@@ -3,6 +3,7 @@ from dataset_creation import Synthetic_Dataset
 from HOTS.tools import HOTS_Dataset, get_loader
 from tqdm import tqdm
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def score_classif_events(likelihood, true_target, thres=None, verbose=True):
@@ -339,6 +340,8 @@ def fit_MLR(path,
         model_name = f'../Records/models/{network.get_fname()}_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
     else:
         model_name = f'../Records/models/{date}_RAW_{int(tau_cla)}_{patch_size}_{kfold}_LR.pkl'
+        
+    print(model_name)
     
     if os.path.isfile(model_name):
         print('load existing model')

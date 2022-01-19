@@ -110,7 +110,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
         self.location_on_system = save_to
 
         file_path = os.path.join(self.location_on_system, self.folder_name)
-        
+
         if not os.path.exists(file_path):
             build_aprovis_dataset(self.location_on_system, self.classes, patch_size=patch_size, sensor_size=self.sensor_size, max_duration=max_duration)
             
