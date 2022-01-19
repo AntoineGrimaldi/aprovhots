@@ -423,6 +423,7 @@ def predict_data(path,
     with open(model_name, 'rb') as file:
         model, loss = pickle.load(file)
     
+    shuffle = False
     tau_cla *= 1e3
     sensor_size = (128,128,2)
     if patch_size: sensor_size = (patch_size[0], patch_size[1], 2)
@@ -433,9 +434,12 @@ def predict_data(path,
     if network:
         path_to_dataset = f'../Records/output/test/{network.get_fname()}_None/';
         dataset = HOTS_Dataset(path_to_dataset, timesurface_size, transform = transform)
+        dataset_for_timestamps = HOTS_Dataset(path_to_dataset, timesurface_size, transform=tonic.transforms.NumpyAsType(int))
     else:
         dataset = Synthetic_Dataset(save_to = path, train = False, patch_size = patch_size, max_duration = max_duration, transform = transform)
-    loader = get_loader(dataset, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, seed = seed)
+        dataset_for_timestamps = Synthetic_Dataset(save_to = path, train = False, patch_size = patch_size, max_duration = max_duration, transform = tonic.transforms.NumpyAsType(int))
+    loader = get_loader(dataset, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, shuffle=shuffle, seed = seed)
+    loader_for_timestamps = get_loader(dataset_for_timestamps, kfold = kfold, kfold_ind = kfold_ind, num_workers = num_workers, shuffle=shuffle, seed=seed)
     if verbose: print(f'Number of training samples: {len(loader)}')
     
     with torch.no_grad():
@@ -446,7 +450,7 @@ def predict_data(path,
         logistic_model = model.to(device)
 
         pbar = tqdm(total=len(loader))
-        likelihood, true_target = [], []
+        likelihood, true_target, timestamps = [], [], []
 
         for X, label in loader:
             X, label = X[0].to(device) ,label[0].to(device)
@@ -457,5 +461,9 @@ def predict_data(path,
             true_target.append(label.cpu().numpy())
             pbar.update(1)
         pbar.close()
+        
+        t_index = dataset_for_timestamps.ordering.index('t')
+        for events, target in loader_for_timestamps:
+            timestamps.append(events[0,:,t_index])
 
-    return likelihood, true_target
+    return likelihood, true_target, timestamps
