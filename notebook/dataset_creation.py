@@ -6,7 +6,7 @@ import numpy as np
 def csv_load(path, name):
     '''load events in .csv files with the same format as in tonic. 
     '''
-    df = pd.read_csv(path+name)
+    df = pd.read_csv(os.path.join(path, name))
     events = None
     index = 0
     print(f'loading -> {name} ...')
