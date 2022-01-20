@@ -30,7 +30,7 @@ def visualization(events, ordering, sensor_size):
     plt.draw()
 
     # save the video
-    name = "../Records/animation/animated.gif" 
+    name = "animated.gif" 
     writergif = PillowWriter(fps=frame_interval*1000) 
     animation.save(name, writer=writergif)
     plt.show()
