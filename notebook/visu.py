@@ -3,9 +3,10 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 
 def visualization(events, ordering, sensor_size):
     #options
-    frame_interval = 10
+    frame_interval = 1e3
     figure_interval = 200
     
+    x_index, y_index = ordering.index('x'), ordering.index('y')
     t_index, p_index = ordering.index('t'), ordering.index('p')
     # initialise the figure
     timestamps=0
@@ -16,9 +17,13 @@ def visualization(events, ordering, sensor_size):
 
     # define the animation
     def animate(i):
-
-        scatter_pos_events.set_offsets(events[(events[:,t_index] >= i*frame_interval) & (events[:,t_index] < (i+1)*frame_interval) & (events[:,p_index] == 1)][: , :2])
-        scatter_neg_events.set_offsets(events[(events[:,t_index] >= i*frame_interval) & (events[:,t_index] < (i+1)*frame_interval) & (events[:,p_index] == 0)][: , :2])
+        events_in_frame = events[(events[:,t_index] >= i*frame_interval) & (events[:,t_index] < (i+1)*frame_interval)]
+        scatter_pos_events.set_offsets(events_in_frame[events_in_frame[:,p_index] == 1][: , [x_index,y_index]])
+        scatter_neg_events.set_offsets(events_in_frame[events_in_frame[:,p_index] == 0][: , [x_index,y_index]])
+        
+        #print(i, i*frame_interval)
+        #if events_in_frame.shape[0]>0:
+        #    print(events_in_frame.shape)
 
         return scatter_pos_events, scatter_neg_events,
 
