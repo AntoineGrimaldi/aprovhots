@@ -12,8 +12,8 @@ def visualization(events, ordering, sensor_size):
     timestamps=0
     fig_events = plt.figure()
     ax = plt.axes(xlim=(0,sensor_size[0]), ylim=(0,sensor_size[1]))
-    scatter_pos_events = ax.scatter([],[], marker="s", animated=True, color="springgreen", label="Positive events")
-    scatter_neg_events = ax.scatter([],[], marker="s", animated=True, color="dodgerblue", label="Negative events")
+    scatter_neg_events = ax.scatter([],[], marker="s", animated=True, color="springgreen", label="SEA")
+    scatter_pos_events = ax.scatter([],[], marker="s", animated=True, color="dodgerblue", label="GROUND")
 
     # define the animation
     def animate(i):
