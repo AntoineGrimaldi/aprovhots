@@ -10,12 +10,15 @@ Data/
 Records/
 notebook/.ipynb_checkpoints/
 notebook/__pycache__/
-
+notebook/demo_files/
+.ipynb_checkpoints/
+notebook/*.gif
 # Executables
 *.swf
 *.air
 *.ipa
 *.apk
+*.gif
 
 # Cache
 *.pyc
