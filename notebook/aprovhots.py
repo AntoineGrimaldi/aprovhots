@@ -5,7 +5,6 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 def score_classif_events(likelihood, true_target, thres=None, verbose=True):
     
     max_len = 0
@@ -197,10 +196,9 @@ def predict_histo(network,
     return accuracy
 
 
-
 def get_properties(events, target, ind_sample, values, ordering = 'xytp', distinguish_polarities = False):
     t_index, p_index = ordering.index('t'), ordering.index('p')
-    if distinguish_polarities: 
+    if distinguish_polarities:
         for polarity in [0,1]:
             events_pol = events[(events[:, p_index]==polarity)]
             isi = np.diff(events_pol[:, t_index])
