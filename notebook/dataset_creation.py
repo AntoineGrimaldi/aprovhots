@@ -66,11 +66,11 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
             events_patch[:,y_index] -= y*patch_height
             for t in range(int(events[-1, t_index]//time_limit-1)):
                 events_patch_timesplit = events_patch[(events_patch[:,t_index]>=t*time_limit)&(events_patch[:,t_index]<(t+1)*time_limit)]
-                events_patch_timesplit -= events_patch_timesplit[-1,t_index]
-                indice+=1
-                if indice>indice_test:
-                    set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
                 if events_patch_timesplit.shape[0]>min_num_events:
+                    events_patch_timesplit -= events_patch_timesplit[-1,t_index]
+                    indice+=1
+                    if indice>indice_test:
+                        set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
                 pbar.update(1)
     pbar.close()
