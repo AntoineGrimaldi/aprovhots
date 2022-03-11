@@ -1,6 +1,6 @@
 import torch, tonic, pickle, os
 from dataset_creation import Synthetic_Dataset
-from HOTS.tools import HOTS_Dataset, get_loader
+#from HOTS.tools import HOTS_Dataset, get_loader
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
