@@ -12,7 +12,7 @@ Testing HOTS algorithm for coastline segmentation
 
 ## Limits of the SpiNN-3
 The SpiNN-3 board is composed of 4 chips, each composed of 18 cores. Since each core can simulate up to 256 spiking neurons, the SpiNN-3 can simulate around 18,000 neurons at most. 
-Another limit applies to the number of input synapses connecting as input onto the neuron: according to [van Albada et al. (2018)](https://www.frontiersin.org/articles/10.3389/fnins.2018.00291/full#:~:text=The%20design%20specifications%20of%20SpiNNaker,otherwise%20the%20synchronization%20of%20the), the design specifications of SpiNNaker assume a connectivity of 1~000 incoming synapses per neuron.
+Another limit applies to the number of input synapses connecting as input onto the neuron: according to [van Albada et al. (2018)](https://www.frontiersin.org/articles/10.3389/fnins.2018.00291/full#:~:text=The%20design%20specifications%20of%20SpiNNaker,otherwise%20the%20synchronization%20of%20the), the design specifications of SpiNNaker assume a connectivity of 1000 incoming synapses per neuron. More than this is not supported by the board.
 
 It is to be noted that "In normal (default) use of the code, unless you change various parameters in your config file, there are actually only 63 cores available under normal circumstances: each chip has 18 cores, but 1 on each chip is used for the OS, 1 on each chip is used for further monitoring, and then 1 on the single ethernet chip for faster data I/O. If you really need 68 then the extra monitoring and faster data I/O can be turned off if necessary." [link](https://groups.google.com/u/0/g/spinnakerusers/c/_ROWtb8m-Wg/m/Fx5usieNBAAJ)
 
