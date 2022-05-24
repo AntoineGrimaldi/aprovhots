@@ -57,6 +57,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
     pbar = tqdm(total=num_patches)
     # divide the pixel grid into patches
     indice = 0
+    not_saved = 0
     set_name = f'/patch_{patch_size}_duration_{max_duration}/train/{label}/'
     indice_test = int(train_test_ratio*num_patches)
     for x in range(width//patch_width):
@@ -75,7 +76,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                         set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
                 else: 
-                    print(events_patch_timesplit.shape[0])
+                    not_saved += 1
                 pbar.update(1)
     pbar.close()
                     
@@ -104,7 +105,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, transform=tonic.transforms.NumpyAsType(int), target_transform=None):
+    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None):
         super(Synthetic_Dataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
@@ -119,7 +120,7 @@ class Synthetic_Dataset(tonic.dataset.Dataset):
         file_path = os.path.join(self.location_on_system, self.folder_name)
 
         if not os.path.exists(file_path):
-            build_aprovis_dataset(self.location_on_system, self.classes, patch_size=patch_size, sensor_size=self.sensor_size, max_duration=max_duration)
+            build_aprovis_dataset(self.location_on_system, self.classes, patch_size=patch_size, sensor_size=self.sensor_size, max_duration=max_duration, min_num_events=min_num_events)
             
         self.sensor_size[0], self.sensor_size[1] = patch_size[0], patch_size[1]
         
