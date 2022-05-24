@@ -24,7 +24,9 @@ def csv_load(path, name):
                 events = np.vstack((events, np.array([x,y,t,p]).T))
             else:
                 events = np.array([x,y,t,p]).T
+            
         else: print(f'file corrupted at row number {index}')
+    np.save(path+name[:-4]+'.npy', events)
     return events
 
 def save_as_patches(events, path, label, name_num, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
@@ -72,6 +74,8 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                     if indice>indice_test:
                         set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
+                else: 
+                    print(events_patch_timesplit.shape[0])
                 pbar.update(1)
     pbar.close()
                     
@@ -84,7 +88,10 @@ def build_aprovis_dataset(path, labelz, patch_size = None, sensor_size=None, max
         for lab_num, label in enumerate(labelz):
             list_csv = glob.glob(f'*{label}*.csv')
             for name_num, name in enumerate(list_csv):
-                events = csv_load(path, name)
+                if os.path.exists(path+name[:-4]+'.npy'):
+                    events = np.load(path+name[:-4]+'.npy')
+                else:
+                    events = csv_load(path, name)
                 save_as_patches(events, path, label, name_num, patch_size = patch_size, sensor_size=sensor_size, max_duration=max_duration, min_num_events=min_num_events, train_test_ratio=train_test_ratio, ordering = ordering)
     else: print(f'this dataset was already created, check at : \n {path}')
             
