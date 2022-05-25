@@ -1,17 +1,17 @@
 # aprovhots
 Testing SNN algorithm for coastline segmentation
 
-TUTORIAL 1 is a an example of use of the [HOTS](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7508476) newtork for object detection on a simple dataset: Poker DVS. 
+**TUTORIAL 1** is a an example of use of the [HOTS](https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7508476) newtork for object detection on a simple dataset: Poker DVS. 
 
-TUTORIAL 2 shows how to build a dataset with some data that come out of the simulator (Gazebo). It makes patches because the original algorithm that is trained for object detection on labeled datasets is transfered to do a segmentation task. The labels are not the different objects but the 'sea' or 'ground' for the different patches in the dataset. 
+**TUTORIAL 2** shows how to build a dataset with some data that come out of the simulator (Gazebo). It makes patches because the original algorithm that is trained for object detection on labeled datasets is transfered to do a segmentation task. The labels are not the different objects but the 'sea' or 'ground' for the different patches in the dataset. 
 
-TUTORIAL 3 trains a single classification layer to do segmentation. The core layers of the HOTS network are not used, only the last one that is a supervised layer trained for segmentation (classification of 'sea' or 'ground' patches). Only one layer is enough to do correct categorization with the data we have so far and if needed an extra layer can be added to perform better on more complex data. 
+**TUTORIAL 3** trains a single classification layer to do segmentation. The core layers of the HOTS network are not used, only the last one that is a supervised layer trained for segmentation (classification of 'sea' or 'ground' patches). Only one layer is enough to do correct categorization with the data we have so far and if needed an extra layer can be added to perform better on more complex data. 
 
 ## Tasks and Datasets needed:
 
-TASK: patch-based segmentation
+**TASK:** patch-based segmentation
 
-DATASET NEEDED: 
+**DATASET NEEDED:** 
 - training set -> event streams that are labeled with 'sea' or 'ground' labels
 - testing set -> event streams that have a coastline and the sea and ground on the side
 - type of data :
