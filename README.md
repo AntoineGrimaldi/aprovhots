@@ -9,7 +9,14 @@ Testing SNN algorithm for coastline segmentation
 
 ## Tasks and Datasets needed:
 
-**TASK:** patch-based segmentation
+**TASK:** 
+- recording of only sea and only ground DVS (Sotiris)
+- wrapping to tonic library 
+    - from RGB transform to events and make a dataset (Amélie)
+    - from DVS recordings (Antoine)
+- patch-based segmentation (Antoine)
+- coastline (Antoine)
+- integration to the spinn-3 board (Amélie )
 
 **DATASET NEEDED:** 
 - training set -> event streams that are labeled with 'sea' or 'ground' labels
