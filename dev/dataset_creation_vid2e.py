@@ -8,7 +8,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
     'path', 'label' and 'name_num' allow to store properly the splitted samples. 
     'ordering' gives the indices of the event stream vectors.
     '''
-    print('splitting ...')
+    # print('splitting ...')
     if not os.path.exists(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}'):
         os.makedirs(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}')
     if not os.path.exists(path+f'/patch_{patch_size}_duration_{max_duration}/test/{label}'):
@@ -27,7 +27,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
         time_limit = max_duration*1e3 #to enter max_duration in ms
     else:
         time_limit = events[-1,t_index]
-    num_patches = int(width//patch_width*height//patch_height*events[-1, t_index]//time_limit)
+    num_patches = width//patch_width*height//patch_height*int(events[-1, t_index]//time_limit)
     pbar = tqdm(total=num_patches)
     # divide the pixel grid into patches
     indice = 0
@@ -41,14 +41,19 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                            (events[:,y_index]>=y*patch_height)&(events[:,y_index]<(y+1)*patch_height)]
             events_patch[:,x_index] -= x*patch_width
             events_patch[:,y_index] -= y*patch_height
-            for t in range(int(events[-1, t_index]//time_limit-1)):
+            for t in range(int(events[-1, t_index]//time_limit)):
                 events_patch_timesplit = events_patch[(events_patch[:,t_index]>=t*time_limit)&(events_patch[:,t_index]<(t+1)*time_limit)]
                 indice+=1
                 if events_patch_timesplit.shape[0]>min_num_events:
-                    events_patch_timesplit -= events_patch_timesplit[-1,t_index]
+                    # print("a",events_patch_timesplit)
+                    # print("HERE",events_patch_timesplit[-1,t_index])
+                    # events_patch_timesplit -= events_patch_timesplit[-1,t_index]
+                    # print("b",events_patch_timesplit)
                     if indice>indice_test:
                         set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
+                    # print("c",events_patch_timesplit)
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
+                    # print()
                 else: 
                     not_saved += 1
                 pbar.update(1)
@@ -73,14 +78,15 @@ class vid2e_Dataset(tonic.dataset.Dataset):
     '''
     classes = ["sea", "gro", "mix"]
     int_classes = dict(zip(classes, range(len(classes))))
-    sensor_size = [128, 128, 2]
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None):
+    def __init__(self, save_to, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2]):
         super(vid2e_Dataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
+
+        self.sensor_size = sensor_size
 
         if train:
             self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'
@@ -156,7 +162,7 @@ def get_info(path,
     nb_ground, nb_sea, isi_neg_sea, isi_neg_ground, isi_pos_sea, isi_pos_ground, dura_sea, dura_ground = [0]*8
     print('Number of samples:\n') 
     for train in [False,True]:
-        dataset = Synthetic_Dataset(save_to=path, train=train, patch_size=patch_size, max_duration=max_duration, transform=tonic.transforms.NumpyAsType(int))
+        dataset = vid2e_Dataset(save_to=path, train=train, patch_size=patch_size, max_duration=max_duration, transform=tonic.transforms.NumpyAsType(int))
         if train: print(f'training set: {len(dataset)}')
         else: print(f'testing set: {len(dataset)}')
         for i in range(len(dataset)):

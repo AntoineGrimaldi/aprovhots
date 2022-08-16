@@ -20,7 +20,7 @@ max_duration = 1e3 # (in ms)
 # labels given to the different classes of the dataset
 labelz = ['sea','gro','mix']
 # original sensor_size of the DVS (width,height,polarity)
-sensor_size = (672, 376, 2)
+sensor_size = [672, 376, 2]
 # discard samples with less than min_num_events events
 min_num_events = 1000
 # split the recordings into train and test sets with train_test_ratio ratio
@@ -28,8 +28,8 @@ train_test_ratio = .75
 # gives the indexing of the event stream
 ordering = 'xytp'
 
-trainset = vid2e_Dataset(save_to=path, train=True, patch_size=patch_size, max_duration=max_duration)
-testset = vid2e_Dataset(save_to=path, train=False, patch_size=patch_size, max_duration=max_duration)
+trainset = vid2e_Dataset(save_to=path, train=True, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
+testset = vid2e_Dataset(save_to=path, train=False, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
 
 
 events, label = next(iter(trainset))
@@ -53,7 +53,7 @@ print(events[1000,:])
 # - other properties can be asked to be plotted like the *median_isi* or can be developed in **get_properties** in order to visualize different features of the dataset. 
 
 import matplotlib.pyplot as plt
-values = get_dataset_info(trainset,testset) #, distinguish_labels=True)
+values = get_dataset_info(trainset,testset, distinguish_labels=True)
 plt.show()
 
 # Orange histograms are for the "ground" label and blue for the "sea":
