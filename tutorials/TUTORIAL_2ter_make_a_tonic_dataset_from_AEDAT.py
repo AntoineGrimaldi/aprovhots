@@ -12,9 +12,9 @@ from hots.utils import get_dataset_info
 
 # path where you'll go to find your .npy files to make the dataset with
 ### TO BE MODIFIED
-path = '/home/amelie/Scripts/Data/coastline_events/RGBframes_to_events/'
-# gives the data type - here we use synthetic data, stored as npy
-data_type = 'synthetic'
+path = '/home/amelie/Scripts/Data/coastline_events/DVS128_ZED_NUC_jAER/'
+# gives the data type - here we use experimental data, stored as npy
+data_type = 'experimental'
 # gives a patch_size to divide spatially the event streams
 patch_size = (16,16)
 # gives a max duration for the samples of the dataset to divide temporally the event streams
@@ -22,7 +22,7 @@ max_duration = 1e3 # (in ms)
 # labels given to the different classes of the dataset
 labelz = ['sea','gro','mix']
 # original sensor_size of the DVS (width,height,polarity)
-sensor_size = [672, 376, 2]
+sensor_size = [128, 128, 2]
 # discard samples with less than min_num_events events
 min_num_events = 1000
 # split the recordings into train and test sets with train_test_ratio ratio
@@ -32,6 +32,7 @@ ordering = 'xytp'
 
 trainset = aprovis3dDataset(save_to=path, data_type=data_type, train=True, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
 testset = aprovis3dDataset(save_to=path, data_type=data_type, train=False, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
+
 
 events, label = next(iter(trainset))
 print(trainset.ordering)
