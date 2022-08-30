@@ -202,7 +202,7 @@ class aprovis3dDataset(tonic.dataset.Dataset):
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, data_type, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2]):
+    def __init__(self, save_to, data_type, classes=None, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2]):
         super(aprovis3dDataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
@@ -210,6 +210,8 @@ class aprovis3dDataset(tonic.dataset.Dataset):
         self.sensor_size = sensor_size
         self.data_type = data_type
         assert data_type in ['synthetic', 'experimental']
+        if classes != None:
+            self.classes = classes
 
         if train:
             self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'

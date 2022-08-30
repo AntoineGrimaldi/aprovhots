@@ -20,7 +20,7 @@ patch_size = (16,16)
 # gives a max duration for the samples of the dataset to divide temporally the event streams
 max_duration = 1e3 # (in ms)
 # labels given to the different classes of the dataset
-labelz = ['sea','gro','mix']
+labelz = ['sea','gro'] #,'mix']
 # original sensor_size of the DVS (width,height,polarity)
 sensor_size = [672, 376, 2]
 # discard samples with less than min_num_events events
@@ -30,8 +30,8 @@ train_test_ratio = .75
 # gives the indexing of the event stream
 ordering = 'xytp'
 
-trainset = aprovis3dDataset(save_to=path, data_type=data_type, train=True, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
-testset = aprovis3dDataset(save_to=path, data_type=data_type, train=False, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
+trainset = aprovis3dDataset(save_to=path, data_type=data_type, classes=labelz, train=True, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
+testset = aprovis3dDataset(save_to=path, data_type=data_type, classes=labelz, train=False, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
 
 events, label = next(iter(trainset))
 print(trainset.ordering)
