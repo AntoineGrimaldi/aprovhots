@@ -110,8 +110,8 @@ def loadaerdat(datafile, debug=1, camera='DVS128'):
     events = np.concatenate((
         [[e] for e in xaddr],
         [[e] for e in yaddr],
-        [[e] for e in pol],
-        [[e] for e in timestamps]
+        [[e] for e in timestamps],
+        [[e] for e in pol]
     ), axis=1).astype('float64')
 
     return events
@@ -158,15 +158,10 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                 events_patch_timesplit = events_patch[(events_patch[:,t_index]>=t*time_limit)&(events_patch[:,t_index]<(t+1)*time_limit)]
                 indice+=1
                 if events_patch_timesplit.shape[0]>min_num_events:
-                    # print("a",events_patch_timesplit)
-                    # print("HERE",events_patch_timesplit[-1,t_index])
                     # events_patch_timesplit -= events_patch_timesplit[-1,t_index]
-                    # print("b",events_patch_timesplit)
                     if indice>indice_test:
                         set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
-                    # print("c",events_patch_timesplit)
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
-                    # print()
                 else: 
                     not_saved += 1
                 pbar.update(1)
