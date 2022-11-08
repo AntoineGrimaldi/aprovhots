@@ -33,11 +33,21 @@ ordering = 'xytp'
 trainset = aprovis3dDataset(save_to=path, data_type=data_type, classes=labelz, train=True, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
 testset = aprovis3dDataset(save_to=path, data_type=data_type, classes=labelz, train=False, patch_size=patch_size, max_duration=max_duration, sensor_size=sensor_size)
 
+print()
 
+print('Train set')
 events, label = next(iter(trainset))
 print(trainset.ordering)
 print(events[1000,:])
 
+print()
+
+print('Test set')
+events, label = next(iter(testset))
+print(testset.ordering)
+print(events[1000,:])
+
+print()
 
 # **Synthetic_Dataset** goes to find the repository where the dataset with the corresponding *patch_size* and *max_duration* is stored. It is stored in *path/patch_{patch_size}_duration_{max_duration}/* and splitted into *./train/* and *./test/* repositories which are splitted into labelz repositories. 
 # 
