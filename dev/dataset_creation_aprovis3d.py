@@ -3,125 +3,13 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 
-
-def loadaerdat(datafile, debug=1, camera='DVS128'):
-    """
-    Adapted from https://github.com/SensorsINI/processAEDAT/blob/master/jAER_utils/loadaerdat.py
-    load AER data file and parse these properties of AE events:
-    - timestamps (in us), 
-    - x,y-position [0..127]
-    - polarity (0/1)
-    @param datafile - path to the file to read
-    @param debug - 0 = silent, 1 (default) = print summary, >=2 = print all debug
-    @param camera='DVS128' or 'DAVIS240'
-    @return (ts, xpos, ypos, pol) 4-tuple of lists containing data of all events;
-    """
-    # constants
-    EVT_DVS = 0  # DVS event type
-    aeLen = 8  # 1 AE event takes 8 bytes
-    readMode = '>II'  # struct.unpack(), 2x ulong, 4B+4B
-    td = 0.000001  # timestep is 1us   
-    if(camera == 'DVS128'):
-        xmask = 0x00fe
-        xshift = 1
-        ymask = 0x7f00
-        yshift = 8
-        pmask = 0x1
-        pshift = 0
-    elif(camera == 'DAVIS240'):  # values take from scripts/matlab/getDVS*.m
-        xmask = 0x003ff000
-        xshift = 12
-        ymask = 0x7fc00000
-        yshift = 22
-        pmask = 0x800
-        pshift = 11
-        eventtypeshift = 31
-    else:
-        raise ValueError("Unsupported camera: %s" % (camera))
-
-    aerdatafh = open(datafile, 'rb')
-    k = 0  # line number
-    p = 0  # pointer, position on bytes
-    statinfo = os.stat(datafile)
-    length = statinfo.st_size 
-    if debug > 0:
-        print ("file size", length)
-    
-    # header
-    lt = aerdatafh.readline()
-    while lt and lt[0] == "#":
-        p += len(lt)
-        k += 1
-        lt = aerdatafh.readline() 
-        if debug >= 2:
-            print (str(lt))
-        continue
-    
-    # variables to parse
-    timestamps = []
-    xaddr = []
-    yaddr = []
-    pol = []
-    
-    # read data-part of file
-    aerdatafh.seek(p)
-    s = aerdatafh.read(aeLen)
-    p += aeLen
-    
-    while p < length:
-        addr, ts = struct.unpack(readMode, s)
-        # parse event type
-        if(camera == 'DAVIS240'):
-            eventtype = (addr >> eventtypeshift)
-        else:  # DVS128
-            eventtype = EVT_DVS
-        
-        # parse event's data
-        if(eventtype == EVT_DVS):  # this is a DVS event
-            x_addr = (addr & xmask) >> xshift
-            y_addr = (addr & ymask) >> yshift
-            a_pol = (addr & pmask) >> pshift
-
-
-            if debug >= 3: 
-                print("ts->", ts)  # ok
-                print("x-> ", x_addr)
-                print("y-> ", y_addr)
-                print("pol->", a_pol)
-
-            timestamps.append(ts)
-            xaddr.append(x_addr)
-            yaddr.append(y_addr)
-            pol.append(a_pol)
-                  
-        aerdatafh.seek(p)
-        s = aerdatafh.read(aeLen)
-        p += aeLen        
-
-    if debug > 0:
-        try:
-            print ("read %i (~ %.2fM) AE events, duration= %.2fs" % (len(timestamps), len(timestamps) / float(10 ** 6), (timestamps[-1] - timestamps[0]) * td))
-            n = 5
-            print ("showing first %i:" % (n))
-            print ("timestamps: %s \nX-addr: %s\nY-addr: %s\npolarity: %s" % (timestamps[0:n], xaddr[0:n], yaddr[0:n], pol[0:n]))
-        except:
-            print ("failed to print statistics")
-
-    events = np.concatenate((
-        [[e] for e in xaddr],
-        [[e] for e in yaddr],
-        [[e] for e in pol],
-        [[e] for e in timestamps]
-    ), axis=1).astype('float64')
-
-    return events
-
-def save_as_patches(events, path, label, name_num, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
+def save_as_patches(events, path, label, name_num, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp', debug=False):
     '''split a stream of events as input ('events') into patches defined spatially by 'patch_size' and temporally by 'max_duration'. 'events' is also splitted into training and testing samples with a ratio defined by 'train_test_ratio' and then stored as .npy files. 
     'path', 'label' and 'name_num' allow to store properly the splitted samples. 
     'ordering' gives the indices of the event stream vectors.
     '''
-    # print('splitting ...')
+    if debug:
+        print('splitting ...')
     if not os.path.exists(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}'):
         os.makedirs(path+f'/patch_{patch_size}_duration_{max_duration}/train/{label}')
     if not os.path.exists(path+f'/patch_{patch_size}_duration_{max_duration}/test/{label}'):
@@ -136,16 +24,23 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
         patch_width, patch_height = patch_size
     else:
         patch_width, patch_height = sensor_size
-    if max_duration:
+    max_ts = np.max(events[:,t_index])
+    if max_duration :
         time_limit = max_duration*1e3 #to enter max_duration in ms
     else:
-        time_limit = events[-1,t_index]
-    num_patches = width//patch_width*height//patch_height*int(events[-1, t_index]//time_limit)
+        # time_limit = events[-1,t_index]
+        time_limit = max_ts
+    num_patches = width//patch_width*height//patch_height*int(max_ts//time_limit)
+    if debug:
+        print("max duration",max_duration) 
+        print('time limit',time_limit) 
+        print("max ts", max_ts)
+        print("num patches",num_patches)
     pbar = tqdm(total=num_patches)
     # divide the pixel grid into patches
     indice = 0
     not_saved = 0
-    set_name = f'/patch_{patch_size}_duration_{max_duration}/train/{label}/'
+    set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
     indice_test = int(train_test_ratio*num_patches)
     for x in range(width//patch_width):
         for y in range(height//patch_height):
@@ -154,23 +49,25 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                            (events[:,y_index]>=y*patch_height)&(events[:,y_index]<(y+1)*patch_height)]
             events_patch[:,x_index] -= x*patch_width
             events_patch[:,y_index] -= y*patch_height
-            for t in range(int(events[-1, t_index]//time_limit)):
+            for t in range(int(max_ts//time_limit)):
                 events_patch_timesplit = events_patch[(events_patch[:,t_index]>=t*time_limit)&(events_patch[:,t_index]<(t+1)*time_limit)]
                 indice+=1
                 if events_patch_timesplit.shape[0]>min_num_events:
-                    # print("a",events_patch_timesplit)
-                    # print("HERE",events_patch_timesplit[-1,t_index])
-                    # events_patch_timesplit -= events_patch_timesplit[-1,t_index]
-                    # print("b",events_patch_timesplit)
                     if indice>indice_test:
-                        set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
-                    # print("c",events_patch_timesplit)
+                        set_name = f'/patch_{patch_size}_duration_{max_duration}/train/{label}/'
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
-                    # print()
                 else: 
                     not_saved += 1
                 pbar.update(1)
     pbar.close()
+    if debug:
+        print('not saved',not_saved, 'patchs')
+
+def load_data(data, data_type, ordering):
+    data = np.load(data)
+    if data_type == 'experimental':
+        data[:,ordering.index('t')] *= 1e6
+    return data
 
 def build_aprovis_dataset(path, labelz, data_type, patch_size = None, sensor_size=None, max_duration=None, min_num_events=1000, train_test_ratio=.75, ordering = 'xytp'):
     '''list all files in 'path', load the events and split the events into different patches to store the patches as a dataset with 'save_as_patches'. Labels of the dataset have to be given in .csv files names and are then selected according to 'labelz'. 
@@ -178,19 +75,13 @@ def build_aprovis_dataset(path, labelz, data_type, patch_size = None, sensor_siz
     print('Building dataset - '+data_type+' data')
     if not os.path.exists(path+f'patch_{patch_size}_duration_{max_duration}'):
         os.chdir(path)
-
-        if data_type == 'experimental':
-            load_data = lambda x: loadaerdat(datafile=x, debug=0, camera='DVS128')
-            extension = '.aedat'
-        elif data_type == 'synthetic':
-            load_data = lambda x: np.load(x)
-            extension = '.npy'
+        extension = '.npy'
 
         for _, label in enumerate(labelz):
             print(label)
             list_files = glob.glob(f'./*{label}*/*{extension}')
             for name_num, name in enumerate(list_files):
-                events = load_data(path+name)
+                events = load_data(path+name, data_type, ordering)
                 save_as_patches(events, path, label, name_num, patch_size = patch_size, sensor_size=sensor_size, max_duration=max_duration, min_num_events=min_num_events, train_test_ratio=train_test_ratio, ordering = ordering)
     else: print(f'this dataset was already created, check at : \n {path}')
             
@@ -202,7 +93,7 @@ class aprovis3dDataset(tonic.dataset.Dataset):
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, data_type, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2]):
+    def __init__(self, save_to, data_type, classes=None, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2]):
         super(aprovis3dDataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
@@ -210,6 +101,8 @@ class aprovis3dDataset(tonic.dataset.Dataset):
         self.sensor_size = sensor_size
         self.data_type = data_type
         assert data_type in ['synthetic', 'experimental']
+        if classes != None:
+            self.classes = classes
 
         if train:
             self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'
