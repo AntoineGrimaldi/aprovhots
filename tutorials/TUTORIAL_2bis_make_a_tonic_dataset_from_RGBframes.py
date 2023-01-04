@@ -12,7 +12,7 @@ from hots.utils import get_dataset_info
 
 # path where you'll go to find your .npy files to make the dataset with
 ### TO BE MODIFIED
-path = '../../Data/2022-06-01_RGBframes_to_events/'
+path = '../../Data/RGB_frames2events/'
 # gives the data type - here we use synthetic data, stored as npy
 data_type = 'synthetic'
 # gives a patch_size to divide spatially the event streams

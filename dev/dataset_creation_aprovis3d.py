@@ -20,17 +20,17 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
         width, height = sensor_size[0], sensor_size[1]
     else:
         width, height = int(max(events[:,x_index])), int(max(events[:,y_index]))
-    if patch_size:
-        patch_width, patch_height = patch_size
-    else:
-        patch_width, patch_height = sensor_size
+    patch_width, patch_height = patch_size
     max_ts = np.max(events[:,t_index])
     if max_duration :
         time_limit = max_duration*1e3 #to enter max_duration in ms
     else:
-        # time_limit = events[-1,t_index]
         time_limit = max_ts
-    num_patches = width//patch_width*height//patch_height*int(max_ts//time_limit)
+    num_patches = int(max_ts//time_limit)
+    if patch_width is not None:
+        num_patches*=width//patch_width
+    if patch_height is not None:
+        num_patches*=height//patch_height
     if debug:
         print("max duration",max_duration) 
         print('time limit',time_limit) 
@@ -40,7 +40,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
     # divide the pixel grid into patches
     indice = 0
     not_saved = 0
-    set_name=f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
+    set_name=f'/patch_{patch_size}_duration_{max_duration}/train/{label}/'
     indice_test = int(train_test_ratio*num_patches)
     for x in range(width//patch_width):
         for y in range(height//patch_height):
@@ -54,7 +54,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
                 indice+=1
                 if events_patch_timesplit.shape[0]>min_num_events:
                     if indice>indice_test:
-                        set_name = f'/patch_{patch_size}_duration_{max_duration}/train/{label}/'
+                        set_name = f'/patch_{patch_size}_duration_{max_duration}/test/{label}/'
                     np.save(path+set_name+f'{patch_size}_{max_duration}_{name_num}_{indice}', events_patch_timesplit)
                 else: 
                     not_saved += 1
@@ -62,6 +62,7 @@ def save_as_patches(events, path, label, name_num, patch_size = None, sensor_siz
     pbar.close()
     if debug:
         print('not saved',not_saved, 'patchs')
+
 
 def load_data(data, data_type, ordering):
     data = np.load(data)
