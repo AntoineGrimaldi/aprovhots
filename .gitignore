@@ -7,6 +7,7 @@ bin-release/
 # Other files and folders
 .settings/
 Data/
+dev/figures/
 Records/
 notebook/.ipynb_checkpoints/
 notebook/__pycache__/
