@@ -1,4 +1,4 @@
-import ast, glob, os, struct, tonic
+import ast, glob, os, struct, tonic, copy
 import pandas as pd
 from tqdm import tqdm
 import numpy as np
@@ -72,7 +72,7 @@ def build_aprovis_dataset(path, labelz, data_type, patch_size, sensor_size, max_
     print('Building dataset - '+data_type+' data')
     folder_name = f'patch_{patch_size}_duration_{max_duration}'
     if not os.path.exists(path+folder_name):
-        current_path = os.path.abspath(os.getcwd()).copy()
+        current_path = copy.copy(os.path.abspath(os.getcwd()))
         os.chdir(path)
         extension = '.npy'
 
