@@ -3,7 +3,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 
-def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering, debug=False):
+def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering, mixed, debug=False):
     '''split a stream of events as input ('events') into patches defined spatially by 'patch_size' and temporally by 'max_duration'. 'events' is also splitted into training and testing samples with a ratio defined by 'train_test_ratio' and then stored as .npy files. 
     'path', 'label' and 'name_num' allow to store properly the splitted samples. 
     'ordering' gives the indices of the event stream vectors.
@@ -14,6 +14,10 @@ def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_
         os.makedirs(path+f'/train/{label}')
     if not os.path.exists(path+f'/test/{label}'):
         os.makedirs(path+f'/test/{label}')
+    if mixed:
+        train_test_ratio = 1
+        if not os.path.exists(path+f'/mixed/{label}'):
+            os.makedirs(path+f'/mixed/{label}')
     x_index, y_index, t_index, _ = ordering.index('x'), ordering.index('y'), ordering.index('t'), ordering.index('p')
     events[:,t_index] -= np.min(events[:,t_index]) #makes time alignment
     if sensor_size:
@@ -37,6 +41,7 @@ def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_
     indice = 0
     not_saved = 0
     set_name=f'{path}/train/{label}/'
+    if mixed: set_name=f'{path}/mixed/{label}/'
     indice_test = int(train_test_ratio*num_patches)
     for x in range(width//patch_width):
         for y in range(height//patch_height):
@@ -56,9 +61,7 @@ def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_
                     not_saved += 1
                 pbar.update(1)
     pbar.close()
-    
     print(f'Number empty of patches: {not_saved}')
-
 
 def load_data(data, data_type, ordering):
     data = np.load(data)
@@ -66,24 +69,22 @@ def load_data(data, data_type, ordering):
         data[:,ordering.index('t')] *= 1e6
     return data
 
-def build_aprovis_dataset(path, labelz, data_type, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering):
+def build_aprovis_dataset(path, labelz, data_type, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering, mixed):
     '''list all files in 'path', load the events and split the events into different patches to store the patches as a dataset with 'save_as_patches'. Labels of the dataset have to be given in .csv files names and are then selected according to 'labelz'. 
     '''
     print('Building dataset - '+data_type+' data')
     folder_name = f'patch_{patch_size}_duration_{max_duration}'
-    if not os.path.exists(path+folder_name):
-        current_path = copy.copy(os.path.abspath(os.getcwd()))
-        os.chdir(path)
-        extension = '.npy'
+    current_path = copy.copy(os.path.abspath(os.getcwd()))
+    os.chdir(path)
+    extension = '.npy'
 
-        for _, label in enumerate(labelz):
-            print(label)
-            list_files = glob.glob(f'*{label}*/*{extension}')
-            for name_num, name in enumerate(list_files):
-                events = load_data(name, data_type, ordering)
-                save_as_patches(events, folder_name, label, name_num, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering)
-        os.chdir(current_path)
-    else: print(f'this dataset was already created, check at : \n {path}')
+    for _, label in enumerate(labelz):
+        print(label)
+        list_files = glob.glob(f'*{label}*/*{extension}')
+        for name_num, name in enumerate(list_files):
+            events = load_data(name, data_type, ordering)
+            save_as_patches(events, folder_name, label, name_num, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering, mixed)
+    os.chdir(current_path)
             
 class aprovis3dDataset(tonic.dataset.Dataset):
     '''creates a dataset from .npy or .aedat files in a specific 'path'. Adapted for synthetic events obtained from RGB frames given by UCA and for experimental events obtained by NTUA
@@ -93,27 +94,30 @@ class aprovis3dDataset(tonic.dataset.Dataset):
     dtype = np.dtype([("x", int), ("y", int), ("t", int), ("p", int)])
     ordering = dtype.names
 
-    def __init__(self, save_to, data_type, classes=None, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2], train_test_ratio = .75):
+    def __init__(self, save_to, data_type, classes=None, train=True, patch_size=None, max_duration=None, min_num_events=1000, transform=tonic.transforms.NumpyAsType(int), target_transform=None, sensor_size=[128,128,2], train_test_ratio = .75, mixed=False):
         super(aprovis3dDataset, self).__init__(
             save_to, transform=transform, target_transform=target_transform
         )
         self.sensor_size = sensor_size.copy()
         self.data_type = data_type
-        assert data_type in ['synthetic', 'experimental']
+        assert data_type in ['synthetic', 'experimental'] # todo change because its only about units
         if classes != None:
             self.classes = classes
 
         if train:
             self.folder_name = f'patch_{patch_size}_duration_{max_duration}/train/'
         else:
-            self.folder_name = f'patch_{patch_size}_duration_{max_duration}/test/'
+            if mixed:
+                self.folder_name = f'patch_{patch_size}_duration_{max_duration}/mixed/'
+            else:
+                self.folder_name = f'patch_{patch_size}_duration_{max_duration}/test/'
             
         self.location_on_system = save_to
 
         file_path = os.path.join(self.location_on_system, self.folder_name)
 
         if not os.path.exists(file_path):
-            build_aprovis_dataset(self.location_on_system, self.classes, self.data_type, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, self.ordering)
+            build_aprovis_dataset(self.location_on_system, self.classes, self.data_type, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, self.ordering, mixed)
             
         self.sensor_size[0], self.sensor_size[1] = patch_size[0], patch_size[1]
         
