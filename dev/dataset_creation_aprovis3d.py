@@ -65,8 +65,9 @@ def save_as_patches(events, path, label, name_num, patch_size, sensor_size, max_
 
 def load_data(data, data_type, ordering):
     data = np.load(data)
-    if data_type == 'experimental':
-        data[:,ordering.index('t')] *= 1e6
+    #if data_type == 'experimental':
+    #    print(data[:,ordering.index('t')])
+    #    data[:,ordering.index('t')] *= 1e6
     return data
 
 def build_aprovis_dataset(path, labelz, data_type, patch_size, sensor_size, max_duration, min_num_events, train_test_ratio, ordering, mixed):
